@@ -19,6 +19,7 @@ import javax.net.SocketFactory
 class SocketHelper(val context: Context, val socketAddress: String, val socketPort: Int) {
 
     private val TAG = "SocketHelper"
+    val LIBRARY_VERSION = BuildConfig.VERSION_NAME
 
     //config
     private val socketTimeout = 10 * 1000
@@ -49,6 +50,8 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
     init {
         this.handler = Handler(handlerCallback)
     }
+
+
 
 
     @Synchronized
