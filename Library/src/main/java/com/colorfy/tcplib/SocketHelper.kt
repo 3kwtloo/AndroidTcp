@@ -136,7 +136,12 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
                     try {
 
                         // no effect if already connected
-                        connectToSocket()
+                        val alreadyConnected = connectToSocket()
+                        if (!alreadyConnected) {
+                            tcpLogger?.log("[run] onConnected-------------")
+
+                            socketMessageListener?.onConnected()
+                        }
 
                         if (currentCommand != null) {
                             writeCommand(currentCommand!!)
@@ -188,8 +193,11 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
         }
 
 
+        /**
+         * returns - true: not connected && connection successful - false: already connected
+         */
         @Throws(IOException::class)
-        private fun connectToSocket() {
+        private fun connectToSocket(): Boolean {
 
             tcpLogger?.log("[connectToSocket]")
 
@@ -212,8 +220,12 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
 
                 socket!!.connect(socketAddress, socketTimeout)
                 tcpLogger?.log("[connectToSocket] socket connecting done")
+
+                return false
             } else {
                 tcpLogger?.log("[connectToSocket] socket already init")
+
+                return true
             }
         }
 
@@ -278,6 +290,8 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
     // ------------------------------------------------------------------------------------------------------------------------------
     interface SocketMessageListener {
         fun onMessage(message: Any?)
+
+        fun onConnected()
 
         fun onError(error: Throwable, cannotConnect: Boolean)
     }

@@ -53,6 +53,10 @@ class MainActivity : AppCompatActivity(), TcpLogger {
     }
 
     val socketMessageListener = object : SocketHelper.SocketMessageListener {
+        override fun onConnected() {
+            Log.e("MainActivity", "onConnected!!!!!!!!!!!!!!!")
+        }
+
         override fun onError(error: Throwable, cannotConnect: Boolean) {
             Log.e("MainActivity", "error!!!!!!!!!!!!!!!, cannotConnect: $cannotConnect")
             Log.e("MainActivity", "error!!!!!!!!!!!!!!!, message: ${error.message}")
