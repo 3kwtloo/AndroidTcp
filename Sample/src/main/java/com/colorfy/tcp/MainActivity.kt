@@ -82,5 +82,9 @@ class MainActivity : AppCompatActivity(), TcpLogger {
             Log.e("MainActivity", "message: " + (message?.toString() ?: "<empty>"))
         }
 
+        override fun onAck(sent: Boolean) {
+            Log.e("MainActivity", "onAck!!!!!!!!!!!!!!!")
+            Log.e("MainActivity", "onAck, sent: $sent")
+        }
     }
 }

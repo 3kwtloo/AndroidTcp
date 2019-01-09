@@ -230,7 +230,7 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
             writer.flush()
 
             tcpLogger?.log("[writeCommand] Writing message complete")
-
+            socketMessageListener?.onAck(true)
         }
 
         @Throws(IOException::class)
@@ -285,6 +285,8 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
         fun onMessage(message: Any?)
 
         fun onConnected(connected: Boolean)
+
+        fun onAck(sent: Boolean)
 
         fun onError(error: Throwable)
     }
