@@ -1,9 +1,9 @@
 package com.colorfy.tcplib
 
+import android.app.Activity
 import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Build
-import android.os.Handler
 import java.io.*
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -31,28 +31,12 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
     var tcpLogger: TcpLogger? = null
     var socketMessageListener: SocketMessageListener? = null
 
-    private val handler: Handler
     private var socketThread: SocketThread? = null
 
     private var currentCommand: Any? = null
 
     @Volatile
     private var isStarted: Boolean = false
-
-    private val handlerCallback = Handler.Callback { msg ->
-        tcpLogger?.log("[handlerCallback] handleMessage, msg: $msg")
-
-        tcpLogger?.log("[handlerCallback] !(msg.obj instanceof String): " + (msg.obj !is String))
-
-
-        socketMessageListener?.onMessage(msg.obj)
-        false
-    }
-
-    init {
-        this.handler = Handler(handlerCallback)
-    }
-
 
     @Synchronized
     fun start() {
@@ -89,16 +73,10 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
         start()
     }
 
-    @Synchronized
-    fun reset() {
-        tcpLogger?.log("Resetting socket client queue")
-
-//        queue.clear()
-    }
 
     @Synchronized
     fun send(cmd: Any) {
-        tcpLogger?.log("[send] cmd: $cmd")
+        tcpLogger?.log("[send] cmd: $cmd, isStarted: $isStarted")
 
         this.currentCommand = cmd
 
@@ -140,7 +118,7 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
                         if (!alreadyConnected) {
                             tcpLogger?.log("[run] onConnected-------------")
 
-                            socketMessageListener?.onConnected()
+                            socketMessageListener?.onConnected(true)
                         }
 
                         if (currentCommand != null) {
@@ -150,32 +128,45 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
                             retries = 0
                         } else {
                             tcpLogger?.log("[run] no cmd to run, waiting .notify (a new message will trigger .notify)")
-                            lock.wait()
+
+                            try {
+                                lock.wait()
+                            } catch (e: Exception) {
+                            }
                         }
 
                     } catch (e: IOException) {
-                        tcpLogger?.log("[run] Exception in socket thread, retrying in 1000")
+                        tcpLogger?.log("[run] Exception in socket thread, retrying in 1000 (if connected)")
 
                         closeQuietly(socket)
                         socket = null
 
-                        socketMessageListener?.onError(e, true)
-                        try {
-                            Thread.sleep(1000)
-                        } catch (e: Exception) {
+
+                        // if cannot connect, stop
+                        if (e.message?.contains(socketAddress) == true) {
+                            socketMessageListener?.onConnected(false)
+
+                            this@SocketHelper.stop()
+                        } else {
+                            socketMessageListener?.onError(e)
+
+                            try {
+                                Thread.sleep(1000)
+                            } catch (e: Exception) {
+                            }
                         }
 
                         e.printStackTrace()
                     } catch (e: InterruptedException) {
                         tcpLogger?.log("[run] Socket thread was interrupted")
 
-                        socketMessageListener?.onError(e, false)
+                        socketMessageListener?.onError(e)
 
                         e.printStackTrace()
                     } catch (e: Exception) {
                         tcpLogger?.log("[run] exception")
 
-                        socketMessageListener?.onError(e, false)
+                        socketMessageListener?.onError(e)
 
                         e.printStackTrace()
                     }
@@ -248,12 +239,14 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
 
             val reader = BufferedReader(InputStreamReader(socket!!.getInputStream(), "UTF-8"))
             val response = reader.readLine()
+
             tcpLogger?.log("[readResponse] response: $response")
 
-            val message = handler.obtainMessage()
-            message.obj = response
+            (context as Activity).runOnUiThread {
+                tcpLogger?.log("[readResponse] socketMessageListener?.onMessagee")
 
-            handler.sendMessage(message)
+                socketMessageListener?.onMessage(response)
+            }
         }
 
         @Throws(IOException::class)
@@ -269,7 +262,7 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
                 if (manager.getNetworkInfo(network) != null && manager.getNetworkInfo(network).type == ConnectivityManager.TYPE_WIFI)
                     return network.socketFactory.createSocket()
 
-            throw IOException("Could not create socket")
+            throw IOException("Could not create socket for $socketAddress")
         }
 
         private fun closeQuietly(closeable: Closeable?) {
@@ -291,8 +284,8 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
     interface SocketMessageListener {
         fun onMessage(message: Any?)
 
-        fun onConnected()
+        fun onConnected(connected: Boolean)
 
-        fun onError(error: Throwable, cannotConnect: Boolean)
+        fun onError(error: Throwable)
     }
 }

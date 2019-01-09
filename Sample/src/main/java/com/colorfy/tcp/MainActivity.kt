@@ -7,6 +7,8 @@ import android.util.Log
 import com.colorfy.tcplib.SocketHelper
 import com.colorfy.tcplib.TcpLogger
 import kotlinx.android.synthetic.main.activity_main.*
+import java.io.IOException
+import java.net.SocketTimeoutException
 
 class MainActivity : AppCompatActivity(), TcpLogger {
 
@@ -53,18 +55,31 @@ class MainActivity : AppCompatActivity(), TcpLogger {
     }
 
     val socketMessageListener = object : SocketHelper.SocketMessageListener {
-        override fun onConnected() {
-            Log.e("MainActivity", "onConnected!!!!!!!!!!!!!!!")
+        override fun onConnected(connected: Boolean) {
+            Log.e("MainActivity", "onConnected!!!!!!!!!!!!!!!, connected: $connected")
         }
 
-        override fun onError(error: Throwable, cannotConnect: Boolean) {
-            Log.e("MainActivity", "error!!!!!!!!!!!!!!!, cannotConnect: $cannotConnect")
+        override fun onError(error: Throwable) {
             Log.e("MainActivity", "error!!!!!!!!!!!!!!!, message: ${error.message}")
+
+            when (error) {
+                is IOException -> {
+                    Log.e("MainActivity", "CANNOT CONNECT ----------------------------------------------------------------")
+                }
+
+                is SocketTimeoutException -> {
+                    if (error.message?.contains(SOCKET_ADDRESS) == true) {
+                        Log.e("MainActivity", "CANNOT CONNECT ----------------------------------------------------------------")
+                    } else {
+
+                    }
+                }
+            }
         }
 
         override fun onMessage(message: Any?) {
             Log.e("MainActivity", "message!!!!!!!!!!!!!!!")
-            Log.e("MainActivity", message?.toString())
+            Log.e("MainActivity", "message: " + (message?.toString() ?: "<empty>"))
         }
 
     }
