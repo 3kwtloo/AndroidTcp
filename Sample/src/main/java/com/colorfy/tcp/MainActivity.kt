@@ -2,7 +2,6 @@ package com.colorfy.tcp
 
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
-import android.util.Base64
 import android.util.Log
 import com.colorfy.tcplib.SocketHelper
 import com.colorfy.tcplib.TcpLogger
@@ -31,14 +30,40 @@ class MainActivity : AppCompatActivity(), TcpLogger {
         }
 
         start.setOnClickListener {
-            socketHelper.start()
+                        socketHelper.start()
+
+
         }
 
         send.setOnClickListener {
-            val imgString = "eyJwdWJsaWNfa2V5X3JlcXVlc3QiIDogeyJwdWJsaWNfa2V5IjogIkJMR0h1N3VQK2lENnAveGpiMjRnU1MwREFwUndUdmVuRVlaYThLOS9pYmZDZEtMNWE4c0ZCRXJlbGQ5Y0lVTEs2a2NaWGRzSjJDQ0xzNW9lcXdTOGRCST0ifX0="
-            val msg = Base64.decode(imgString, Base64.NO_WRAP)
+//            val json = JSONObject()
+//            val publickey = JSONObject()
+//            publickey.put("id", "da11cbc0")
+//            publickey.put("public_key", "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/texIOJTrxb2CQ19XueNbLVDY9nJX7NsrmgswgP8+xEDkt5b6Lh5jNOq0QOOQ4DguYay0xwd/LmIJfvAjisTHw==")
+//            json.put("public_key_request", publickey)
+//
+//            val msg = json.toString()
+//            Log.e("MainActivity", "jsooooon: $msg")
+//
+////            val msg = "{\"public_key_request\":{\"id\":\"da11cbc0\",\"public_key\":\"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/texIOJTrxb2CQ19XueNbLVDY9nJX7NsrmgswgP8+xEDkt5b6Lh5jNOq0QOOQ4DguYay0xwd/LmIJfvAjisTHw==\"}}"
 
-            socketHelper.send(msg)
+
+            var tContents = ""
+            try {
+                val stream = assets.open("req.json")
+
+                val size = stream.available()
+                val buffer = ByteArray(size)
+                stream.read(buffer)
+                stream.close()
+                tContents = String(buffer)
+
+                Log.e("MainActivity", "tContents: $tContents")
+
+            } catch (e: Exception) {
+            }
+
+            socketHelper.send(tContents)
         }
 
         stop.setOnClickListener {

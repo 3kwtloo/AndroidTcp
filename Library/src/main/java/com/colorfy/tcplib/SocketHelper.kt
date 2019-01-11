@@ -4,7 +4,9 @@ import android.app.Activity
 import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Build
-import java.io.*
+import java.io.Closeable
+import java.io.IOException
+import java.io.PrintWriter
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -95,7 +97,6 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
 
         private var socket: Socket? = null
         private var isRunning = true
-        private var retries = 0
 
         val lock = java.lang.Object()
 
@@ -122,10 +123,28 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
                         }
 
                         if (currentCommand != null) {
-                            writeCommand(currentCommand!!)
-                            readResponse()
+
+                            val cmd = currentCommand
                             currentCommand = null
-                            retries = 0
+
+                            writeCommand(cmd!!)
+                            readResponse()
+
+//                            var oos: ObjectOutputStream?
+//                            var ois: ObjectInputStream?
+//
+//                            oos = ObjectOutputStream(socket!!.getOutputStream())
+//                            tcpLogger?.log("Sending request to Socket Server")
+//                            oos.writeObject(currentCommand)
+//                            tcpLogger?.log("Sending request to Socket Server DONE")
+//
+//                            //read the server response message
+//                            ois = ObjectInputStream(socket!!.getInputStream())
+//                            val message = ois.readObject() as String
+//                            tcpLogger?.log("Message: $message")
+//                            //close resources
+//                            ois.close()
+//                            oos.close()
                         } else {
                             tcpLogger?.log("[run] no cmd to run, waiting .notify (a new message will trigger .notify)")
 
@@ -136,7 +155,7 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
                         }
 
                     } catch (e: IOException) {
-                        tcpLogger?.log("[run] Exception in socket thread, retrying in 1000 (if connected)")
+                        tcpLogger?.log("[run] Exception in socket thread, IOException")
 
                         closeQuietly(socket)
                         socket = null
@@ -149,11 +168,6 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
                             this@SocketHelper.stop()
                         } else {
                             socketMessageListener?.onError(e)
-
-                            try {
-                                Thread.sleep(1000)
-                            } catch (e: Exception) {
-                            }
                         }
 
                         e.printStackTrace()
@@ -224,22 +238,43 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
         private fun writeCommand(command: Any) {
             tcpLogger?.log("[writeCommand] command: $command")
 
-            val writer = PrintWriter(BufferedWriter(OutputStreamWriter(socket!!.getOutputStream(), "UTF-8")))
+            val writer = PrintWriter(socket!!.getOutputStream(), true)
 
-            writer.print(command)
+            writer.println(command)
             writer.flush()
 
+
             tcpLogger?.log("[writeCommand] Writing message complete")
+
             socketMessageListener?.onAck(true)
         }
+
+
+        fun convertStreamToString(`is`: java.io.InputStream): String {
+            val s = java.util.Scanner(`is`).useDelimiter("\\A")
+            return if (s.hasNext()) s.next() else ""
+        }
+
 
         @Throws(IOException::class)
         private fun readResponse() {
             tcpLogger?.log("[readResponse]")
 
-            val reader = BufferedReader(InputStreamReader(socket!!.getInputStream(), "UTF-8"))
-            val response = reader.readLine()
 
+//            val reader = BufferedReader(InputStreamReader(socket!!.getInputStream()))
+//
+//            var response = ""
+//            while (true) {
+//                val char = reader.read()
+//                tcpLogger?.log("[readResponse] char: ${char}")
+//
+//                if (char == -1)
+//                    break
+//
+//                response += char.toChar().toString()
+//            }
+
+            val response = convertStreamToString(socket!!.getInputStream())
             tcpLogger?.log("[readResponse] response: $response")
 
             (context as Activity).runOnUiThread {
