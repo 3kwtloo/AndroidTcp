@@ -277,11 +277,11 @@ class SocketHelper(val context: Context, val socketAddress: String, val socketPo
             val response = convertStreamToString(socket!!.getInputStream())
             tcpLogger?.log("[readResponse] response: $response")
 
-            (context as Activity).runOnUiThread {
+            Thread(Runnable{
                 tcpLogger?.log("[readResponse] socketMessageListener?.onMessagee")
 
                 socketMessageListener?.onMessage(response)
-            }
+            }).start()
         }
 
         @Throws(IOException::class)
